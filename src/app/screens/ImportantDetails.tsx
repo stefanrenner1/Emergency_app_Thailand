@@ -113,7 +113,7 @@ function ProfileDetailsDisplay({
 export default function ImportantDetails() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { setProfile: setProfileContext } = useProfile();
   const [showHelp, setShowHelp] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -182,8 +182,8 @@ export default function ImportantDetails() {
   const handleDelete = async () => {
     if (!user?.id) return;
     const confirmMsg = language === 'en'
-      ? 'Delete your profile? This cannot be undone.'
-      : 'ลบโปรไฟล์ของคุณ? ไม่สามารถยกเลิกได้';
+      ? 'Delete your profile and log out? You can log in again with the same credentials and create a new profile. Your data will remain stored (marked as deleted).'
+      : 'ลบโปรไฟล์และออกจากระบบ? คุณสามารถเข้าสู่ระบบอีกครั้งด้วยข้อมูลเดิมและสร้างโปรไฟล์ใหม่ ข้อมูลของคุณจะยังคงเก็บไว้ (ทำเครื่องหมายว่าลบแล้ว)';
     if (!window.confirm(confirmMsg)) return;
     setDeleting(true);
     try {
@@ -192,6 +192,8 @@ export default function ImportantDetails() {
       setProfileContext(null);
       localStorage.removeItem('userProfile');
       localStorage.removeItem('userId');
+      await signOut();
+      navigate('/');
     } catch (err) {
       console.error(err);
       alert(language === 'en' ? 'Failed to delete profile' : 'ลบโปรไฟล์ไม่สำเร็จ');

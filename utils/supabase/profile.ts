@@ -73,6 +73,7 @@ export async function saveUserProfile(
       contact_name: profile.contactName,
       contact_phone: profile.contactPhone,
       medical_notes: profile.medicalNotes || null,
+      deleted_at: null, // Profil wiederherstellen falls vorher soft-deleted
       ...consentFields,
     },
     { onConflict: "user_id" }
@@ -89,6 +90,7 @@ export async function loadUserProfile(userId: string): Promise<RemoteUserProfile
     .from("profiles")
     .select("user_id,full_name,insurance_number,nationality,date_of_birth,contact_name,contact_phone,medical_notes,privacy_policy_accepted_at,disclaimer_accepted_at")
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
@@ -99,11 +101,18 @@ export async function loadUserProfile(userId: string): Promise<RemoteUserProfile
   return data ? fromRow(data as ProfileRow) : null;
 }
 
+/**
+ * Soft delete: Markiert Profil als gelöscht (deleted_at), Daten bleiben in DB.
+ * User kann sich mit gleichen Zugangsdaten wieder einloggen und neues Profil anlegen.
+ */
 export async function deleteUserProfile(userId: string): Promise<void> {
-  const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("user_id", userId);
 
   if (error) {
-    console.error("Failed to delete profile from Supabase:", error);
+    console.error("Failed to soft delete profile in Supabase:", error);
     throw new Error(error.message);
   }
 }
